@@ -16,43 +16,60 @@ ENV IQFEED_LOG_LEVEL 0xB222
 
 ENV WINEDEBUG -all
 
-RUN \
-    dpkg --add-architecture i386 && \
-    # Use a more compatible approach for Ubuntu Noble
-    sed -i 's/^deb /deb [trusted=yes] /g' /etc/apt/sources.list && \
-    apt-get update && apt-get upgrade -yq && \
-    apt-get install -yq --no-install-recommends \
-        software-properties-common apt-utils supervisor xvfb wget tar gpg-agent bbe netcat-openbsd net-tools && \
-    # Install python for pyiqfeed
-    apt-get install -yq --no-install-recommends \
-        git python3 python3-setuptools python3-numpy python3-pip python3-tz \
-        python3-psycopg2 python3-dateutil python3-sqlalchemy python3-pandas && \
-    # Cleaning up.
+# Step 1: Configure APT, add i386 architecture, and trust the repos
+RUN dpkg --add-architecture i386 && \
+    # This command adds 'Trusted: yes' to the official Ubuntu sources file, fixing the GPG error
+    sed -i '/^Types: deb$/a Trusted: yes' /etc/apt/sources.list.d/ubuntu.sources && \
+    apt-get update && \
+    apt-get upgrade -yq
+
+# Step 2: Install system and python dependencies in a single layer to optimize image size
+RUN apt-get install -yq --no-install-recommends \
+        software-properties-common \
+        apt-utils \
+        supervisor \
+        xvfb \
+        wget \
+        tar \
+        gpg-agent \
+        bbe \
+        netcat-openbsd \
+        net-tools \
+        git \
+        python3 \
+        python3-setuptools \
+        python3-numpy \
+        python3-pip \
+        python3-tz \
+        python3-psycopg2 \
+        python3-dateutil \
+        python3-sqlalchemy \
+        python3-pandas && \
+    # Cleaning up in the same layer where packages were installed
     apt-get autoremove -y --purge && \
     apt-get clean -y && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-RUN \
-    # Install winehq-stable    
-    mkdir -pm755 /etc/apt/keyrings && \
-    wget -O - https://dl.winehq.org/wine-builds/winehq.key | gpg --dearmor -o /etc/apt/keyrings/winehq-archive.key - && \
+# Step 3: Install WineHQ
+RUN mkdir -pm755 /etc/apt/keyrings && \
+    wget -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key && \
     wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/noble/winehq-noble.sources && \
-    apt-get update && apt-get install -yq --no-install-recommends winehq-stable && \
-    apt-get install -yq --no-install-recommends winbind winetricks cabextract && \
+    apt-get update && \
+    apt-get install -yq --no-install-recommends winehq-stable winbind winetricks cabextract && \
     wget https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks && \
-	chmod +x winetricks && mv winetricks /usr/local/bin && \
-    # Cleaning up.
+    chmod +x winetricks && mv winetricks /usr/local/bin && \
+    # Cleaning up
     apt-get autoremove -y --purge && \
     apt-get clean -y && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-    # Init wine instance
+# Init wine instance
 RUN \
     winecfg && wineserver --wait
-    # Download iqfeed client
+# Download iqfeed client
 RUN \
     wget -nv http://www.iqfeed.net/$IQFEED_INSTALLER_BIN -O /root/$IQFEED_INSTALLER_BIN
-    # Install iqfeed client
+# Install iqfeed client
 RUN \
     xvfb-run -s -noreset -a wine64 /root/$IQFEED_INSTALLER_BIN /S && wineserver --wait
 RUN \
