@@ -16,16 +16,18 @@ ENV IQFEED_LOG_LEVEL 0xB222
 
 ENV WINEDEBUG -all
 
-# Step 1: Configure APT, add i386 architecture, and trust the repos
+# Step 1: Manually fetch and install the missing GPG key.
+# This ADD command pulls the key directly from the URL without needing apt/wget.
+ADD https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x871920D1991BC93C /tmp/ubuntu-key.asc
+
+# Now properly install the key and clean up. gpg is available in the base image.
+RUN gpg --dearmor -o /usr/share/keyrings/ubuntu-archive-keyring-2024.gpg /tmp/ubuntu-key.asc && \
+    rm /tmp/ubuntu-key.asc
+
+# Step 2: With the key fixed, perform the update and upgrade. No workarounds needed.
 RUN dpkg --add-architecture i386 && \
-    # Temporarily disable the failing post-update script
-    echo 'APT::Update::Post-Invoke { };' > /etc/apt/apt.conf.d/99-no-post-invoke && \
-    # Keep the fix for trusting the repository
-    sed -i '/^Types: deb$/a Trusted: yes' /etc/apt/sources.list.d/ubuntu.sources && \
     apt-get update && \
-    apt-get upgrade -yq && \
-    # Clean up the temporary config file
-    rm /etc/apt/apt.conf.d/99-no-post-invoke
+    apt-get upgrade -yq
 
 # Step 2: Install system and python dependencies in a single layer to optimize image size
 RUN apt-get install -yq --no-install-recommends \
