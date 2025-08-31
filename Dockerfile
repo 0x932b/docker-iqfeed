@@ -63,7 +63,7 @@ RUN \
 
 # Copy local pyiqfeed repository
 COPY ./pyiqfeed /root/pyiqfeed
-RUN cd /root/pyiqfeed && pip install -e .
+RUN cd /root/pyiqfeed && pip install --break-system-packages -e .
 
 ADD launch_iqfeed.py /root/launch_iqfeed.py
 ADD pyiqfeed_admin_conn.py /root/pyiqfeed_admin_conn.py
