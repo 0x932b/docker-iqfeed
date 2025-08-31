@@ -18,15 +18,8 @@ ENV WINEDEBUG -all
 
 RUN \
     dpkg --add-architecture i386 && \
-    mkdir -p /etc/apt/keyrings && \
-    apt-get update -y || true && \
-    # Manually download and add the Ubuntu archive keyring
-    apt-get install -y --no-install-recommends wget || true && \
-    wget -O /etc/apt/keyrings/ubuntu-archive-keyring.gpg https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x871920D1991BC93C && \
-    echo "deb [signed-by=/etc/apt/keyrings/ubuntu-archive-keyring.gpg] http://archive.ubuntu.com/ubuntu noble main" > /etc/apt/sources.list && \
-    echo "deb [signed-by=/etc/apt/keyrings/ubuntu-archive-keyring.gpg] http://archive.ubuntu.com/ubuntu noble-updates main" >> /etc/apt/sources.list && \
-    echo "deb [signed-by=/etc/apt/keyrings/ubuntu-archive-keyring.gpg] http://archive.ubuntu.com/ubuntu noble-backports main" >> /etc/apt/sources.list && \
-    echo "deb [signed-by=/etc/apt/keyrings/ubuntu-archive-keyring.gpg] http://security.ubuntu.com/ubuntu noble-security main" >> /etc/apt/sources.list && \
+    # Use a more compatible approach for Ubuntu Noble
+    sed -i 's/^deb /deb [trusted=yes] /g' /etc/apt/sources.list && \
     apt-get update && apt-get upgrade -yq && \
     apt-get install -yq --no-install-recommends \
         software-properties-common apt-utils supervisor xvfb wget tar gpg-agent bbe netcat-openbsd net-tools && \
