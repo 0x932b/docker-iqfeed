@@ -18,10 +18,14 @@ ENV WINEDEBUG -all
 
 # Step 1: Configure APT, add i386 architecture, and trust the repos
 RUN dpkg --add-architecture i386 && \
-    # This command adds 'Trusted: yes' to the official Ubuntu sources file, fixing the GPG error
+    # Temporarily disable the failing post-update script
+    echo 'APT::Update::Post-Invoke { };' > /etc/apt/apt.conf.d/99-no-post-invoke && \
+    # Keep the fix for trusting the repository
     sed -i '/^Types: deb$/a Trusted: yes' /etc/apt/sources.list.d/ubuntu.sources && \
     apt-get update && \
-    apt-get upgrade -yq
+    apt-get upgrade -yq && \
+    # Clean up the temporary config file
+    rm /etc/apt/apt.conf.d/99-no-post-invoke
 
 # Step 2: Install system and python dependencies in a single layer to optimize image size
 RUN apt-get install -yq --no-install-recommends \
