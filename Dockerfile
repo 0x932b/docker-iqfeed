@@ -18,6 +18,9 @@ ENV WINEDEBUG -all
 
 RUN \
     dpkg --add-architecture i386 && \
+    apt-get update -y || true && \
+    apt-get install -y --no-install-recommends gnupg2 ca-certificates && \
+    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 871920D1991BC93C && \
     apt-get update && apt-get upgrade -yq && \
     apt-get install -yq --no-install-recommends \
         software-properties-common apt-utils supervisor xvfb wget tar gpg-agent bbe netcat-openbsd net-tools && \
