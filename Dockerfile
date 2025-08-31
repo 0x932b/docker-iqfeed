@@ -55,15 +55,15 @@ RUN \
     xvfb-run -s -noreset -a wine64 /root/$IQFEED_INSTALLER_BIN /S && wineserver --wait
 RUN \
     wine64 reg add HKEY_CURRENT_USER\\\Software\\\DTN\\\IQFeed\\\Startup /t REG_DWORD /v LogLevel /d $IQFEED_LOG_LEVEL /f && wineserver --wait
+# We'll replace the git clone with COPY in a separate step
 RUN \
-    # Add pyiqfeed 
-    git clone https://github.com/jaikumarm/pyiqfeed.git && \
-    cd pyiqfeed && \
-    python3 setup.py install && \
-    cd .. && rm -rf pyiqfeed && \
     # 'hack' to allow the client to listen on other interfaces
     bbe -e 's/127.0.0.1/000.0.0.0/g' "/root/.wine/drive_c/Program Files/DTN/IQFeed/iqconnect.exe" > "/root/.wine/drive_c/Program Files/DTN/IQFeed/iqconnect_patched.exe" && \
     rm -rf /root/.wine/.cache
+
+# Copy local pyiqfeed repository
+COPY ./pyiqfeed /root/pyiqfeed
+RUN cd /root/pyiqfeed && pip install -e .
 
 ADD launch_iqfeed.py /root/launch_iqfeed.py
 ADD pyiqfeed_admin_conn.py /root/pyiqfeed_admin_conn.py
@@ -73,7 +73,7 @@ RUN chmod +x /root/iqfeed_startup.sh && mkdir -p /root/DTN/IQFeed
 
 ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-EXPOSE 5009 9100 9200 9300 9400 
+EXPOSE 5009 9100 9200 9300 9400
 EXPOSE 5900 8080
 
 CMD ["/usr/bin/supervisord"]
