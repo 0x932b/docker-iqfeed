@@ -1,4 +1,5 @@
-FROM ubuntu:kinetic
+# Use a supported Long-Term Support (LTS) release
+FROM ubuntu:22.04
 
 WORKDIR /root/
 ENV HOME /root
@@ -31,25 +32,27 @@ RUN \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN \
-    # Install winehq-stable    
-    wget -O - https://dl.winehq.org/wine-builds/winehq.key | apt-key add - && \
-    add-apt-repository 'deb https://dl.winehq.org/wine-builds/ubuntu/ kinetic main' && \
+    # Install winehq-stable for jammy (22.04)
+    apt-get update && \
+    mkdir -pm755 /etc/apt/keyrings && \
+    wget -O /etc/apt/keyrings/winehq-archive.key https://dl.winehq.org/wine-builds/winehq.key && \
+    wget -NP /etc/apt/sources.list.d/ https://dl.winehq.org/wine-builds/ubuntu/dists/jammy/winehq-jammy.sources && \
     apt-get update && apt-get install -yq --no-install-recommends winehq-stable && \
     apt-get install -yq --no-install-recommends winbind winetricks cabextract && \
     wget https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks && \
-	chmod +x winetricks && mv winetricks /usr/local/bin && \
+    chmod +x winetricks && mv winetricks /usr/local/bin && \
     # Cleaning up.
     apt-get autoremove -y --purge && \
     apt-get clean -y && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-    # Init wine instance
+# Init wine instance
 RUN winecfg && wineserver --wait
-    # Download iqfeed client
+# Download iqfeed client
 RUN wget -nv http://www.iqfeed.net/$IQFEED_INSTALLER_BIN -O /root/$IQFEED_INSTALLER_BIN
-    # Install iqfeed client
+# Install iqfeed client
 RUN xvfb-run -s -noreset -a wine64 /root/$IQFEED_INSTALLER_BIN /S && wineserver --wait
-RUN wine64 reg add HKEY_CURRENT_USER\\\Software\\\DTN\\\IQFeed\\\Startup /t REG_DWORD /v LogLevel /d $IQFEED_LOG_LEVEL /f && wineserver --wait
+RUN wine64 reg add HKEY_CURRENT_USER\\Software\\DTN\\IQFeed\\Startup /t REG_DWORD /v LogLevel /d $IQFEED_LOG_LEVEL /f && wineserver --wait
 RUN \
     # Add pyiqfeed 
     git clone https://github.com/jaikumarm/pyiqfeed.git && \
